@@ -1,7 +1,115 @@
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="UTF-8">
+<title>Goku RPG</title>
+<style>
+body { font-family: Arial; }
+#game {
+  width: 640px;
+  height: 400px;
+  border: 2px solid black;
+  position: relative;
+  background: #7ec850;
+}
+.player, .npc {
+  width: 32px;
+  height: 32px;
+  position: absolute;
+  text-align:center;
+  line-height:32px;
+}
+.player { background: orange; }
+.npc { background: red; color:white; }
+</style>
+</head>
 <body>
-<h1>TV Test</h1>
-<button onclick="alert('Success!')">Click Me</button>
+
+<h2>Goku RPG</h2>
+
+<div id="stats">
+Form: Base |
+Power: <span id="power">100</span>
+</div>
+
+<p>
+1 = Base |
+2 = SSJ |
+3 = SSG |
+Space = Fight NPC
+</p>
+
+<div id="game">
+  <div id="player" class="player">G</div>
+  <div id="npc" class="npc" style="left:300px;top:150px;">E</div>
+</div>
+
+<p id="msg">Explore the map.</p>
+
+<script>
+var player=document.getElementById("player");
+var npc=document.getElementById("npc");
+
+var x=50;
+var y=50;
+
+var form="Base";
+var power=100;
+
+function update(){
+ player.style.left=x+"px";
+ player.style.top=y+"px";
+ document.getElementById("power").innerHTML=power;
+}
+
+document.addEventListener("keydown",function(e){
+
+ if(e.keyCode==37)x-=10;
+ if(e.keyCode==38)y-=10;
+ if(e.keyCode==39)x+=10;
+ if(e.keyCode==40)y+=10;
+
+ if(e.key=="1"){
+   form="Base";
+   power=100;
+ }
+
+ if(e.key=="2"){
+   form="SSJ";
+   power=500;
+ }
+
+ if(e.key=="3"){
+   form="SSG";
+   power=2000;
+ }
+
+ document.getElementById("stats").innerHTML=
+ "Form: "+form+" | Power: <span id='power'>"+power+"</span>";
+
+ if(e.keyCode==32){
+
+   var dx=x-300;
+   var dy=y-150;
+
+   if(Math.abs(dx)<50 && Math.abs(dy)<50){
+
+      if(power>=1000){
+        document.getElementById("msg").innerHTML=
+        "Enemy defeated!";
+      }else{
+        document.getElementById("msg").innerHTML=
+        "Too weak. Transform first!";
+      }
+
+   }
+ }
+
+ update();
+});
+
+update();
+</script>
+
 </body>
 </html>
