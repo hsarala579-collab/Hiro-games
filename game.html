@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Retro Pokémon Prototype</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: monospace;
+            color: white;
+        }
+        canvas {
+            border: 4px solid #fff;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+
+<script>
+// --- GAME CONFIGURATION & STATE ---
+var canvas = document.getElementById("gameCanvas");
+var ctx = canvas.getContext("2d");
+
+var tileSize = 40;
+var gameState = "EXPLORE"; // Modes: "EXPLORE" or "BATTLE"
+
+// Player Object
+var player = {
+    x: 4 * tileSize,
+    y: 4 * tileSize,
+    hp: 20,
+    maxHp: 20
+};
+
+// Enemy Object (Wild Pokémon)
+var enemy = {
+    name: "WILD RATATA",
+    hp: 15,
+    maxHp: 15
+};
+
+// Map Grid (10x10): 0 = Empty, 1 = Tall Grass (Encounter Zone)
+var map = [
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,0,0,1,1,1,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0]
+];
+
+// Battle Menu Selection
+var battleMenuIndex = 0; // 0 = Fight, 1 = Run
+var battleLog = "A wild POKÉMON appeared!";
+
+// --- INPUT HANDLING ---
+window.addEventListener("keydown", function(e) {
+    if (gameState === "EXPLORE") {
+        handleExploreInput(e.key);
+    } else if (gameState === "BATTLE") {
+        handleBattleInput(e.key);
+    }
+});
+
+function handleExploreInput(key) {
+    var nextX = player.x;
+    var nextY = player.y;
+
+    if (key === "ArrowUp" || key === "w") nextY -= tileSize;
+    if (key === "ArrowDown" || key === "s") nextY += tileSize;
+    if (key === "ArrowLeft" || key === "a") nextX -= tileSize;
+    if (key === "ArrowRight" || key === "d") nextX += tileSize;
+
+    // Boundary Collision check
+    if (nextX >= 0 && nextX < canvas.width && nextY >= 0 && nextY < canvas.height) {
+        player.x = nextX;
+        player.y = nextY;
+        
+        // Check for Random Encounter in Tall Grass (Tile type 1)
+        var gridX = player.x / tileSize;
+        var gridY = player.y / tileSize;
+        if (map[gridY][gridX] === 1) {
+            // 20% chance of encounter per step
+            if (Math.random() < 0.20) {
+                initiateBattle();
+            }
+        }
+    }
+}
+
+function handleBattleInput(key) {
+    if (key === "ArrowLeft" || key === "a") battleMenuIndex = 0;
+    if (key === "ArrowRight" || key === "d") battleMenuIndex = 1;
+    
+    if (key === "Enter" || key === " ") {
+        if (battleMenuIndex === 0) {
+            // FIGHT chosen
+            executeBattleTurn();
+        } else {
+            // RUN chosen
+            battleLog = "Got away safely!";
+            setTimeout(function() {
+                gameState = "EXPLORE";
+            }, 1000);
+        }
+    }
+}
+
+// --- GAME LOGIC ---
+function initiateBattle() {
+    gameState = "BATTLE";
+    enemy.hp = enemy.maxHp; // Reset enemy HP
+    battleLog = "A wild RATATA jumped out!";
+    battleMenuIndex = 0;
+}
+
+function executeBattleTurn() {
+    // Player Attacks Enemy
+    var playerDamage = Math.floor(Math.random() * 5) + 3; // 3 to 7 damage
+    enemy.hp -= playerDamage;
+    battleLog = "You used TACKLE! Did " + playerDamage + " dmg.";
+
+    if (enemy.hp <= 0) {
+        enemy.hp = 0;
+        battleLog = "Enemy fainted! You win!";
+        setTimeout(function() {
+            gameState = "EXPLORE";
+        }, 1500);
+        return;
+    }
+
+    // Enemy Attacks Player after a short delay
+    setTimeout(function() {
+        if (gameState !== "BATTLE") return; // Safety check
+        var enemyDamage = Math.floor(Math.random() * 4) + 2; // 2 to 5 damage
+        player.hp -= enemyDamage;
+        battleLog = "RATATA used TACKLE! Did " + enemyDamage + " dmg.";
+
+        if (player.hp <= 0) {
+            player.hp = 0;
+            battleLog = "You whited out... Game Over.";
+            setTimeout(function() {
+                player.hp = player.maxHp;
+                player.x = 4 * tileSize;
+                player.y = 4 * tileSize;
+                gameState = "EXPLORE";
+            }, 2000);
+        }
+    }, 1000);
+}
+
+// --- RENDERING FUNCTIONS ---
+function drawExplore() {
+    // Clear Screen
+    ctx.fillStyle = "#87CEEB"; // Sky blue background for world
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Map Grid
+    for (var r = 0; r < map.length; r++) {
+        for (var c = 0; c < map[r].length; c++) {
+            if (map[r][c] === 1) {
+                ctx.fillStyle = "#2d7d46"; // Tall Grass Green
+                ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                // Simple grass tuft lines
+                ctx.strokeStyle = "#1b4d2b";
+                ctx.beginPath();
+                ctx.moveTo(c * tileSize + 10, r * tileSize + 30);
+                ctx.lineTo(c * tileSize + 20, r * tileSize + 10);
+                ctx.lineTo(c * tileSize + 30, r * tileSize + 30);
+                ctx.stroke();
+            }
+        }
+    }
+
+    // Draw Player (Red Square reminiscent of Red's cap)
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(player.x + 5, player.y + 5, tileSize - 10, tileSize - 10);
+}
+
+function drawBattle() {
+    // Clear Screen for Battle Scene
+    ctx.fillStyle = "#f8f8f8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Enemy Platform & Info
+    ctx.fillStyle = "#aaa";
+    ctx.fillRect(240, 100, 120, 10); // Enemy platform
+    ctx.fillStyle = "#777";
+    ctx.fillRect(260, 40, 80, 50); // Enemy Placeholder Square
+    
+    ctx.fillStyle = "#000";
+    ctx.font = "14px monospace";
+    ctx.fillText(enemy.name, 20, 50);
+    ctx.fillText("HP: " + enemy.hp + "/" + enemy.maxHp, 20, 70);
+
+    // Player Platform & Info
+    ctx.fillStyle = "#aaa";
+    ctx.fillRect(40, 260, 120, 10); // Player platform
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(60, 200, 80, 50); // Player Back Placeholder Square
+    
+    ctx.fillStyle = "#000";
+    ctx.fillText("CHARIZARD", 240, 210);
+    ctx.fillText("HP: " + player.hp + "/" + player.maxHp, 240, 230);
+
+    // Dialogue / Action Box
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 4;
+    ctx.fillRect(10, 300, 380, 90);
+    ctx.strokeRect(10, 300, 380, 90);
+
+    // Render Text Logs
+    ctx.fillStyle = "#000";
+    ctx.font = "12px monospace";
+    ctx.fillText(battleLog, 25, 330);
+
+    // Action Choices Menu
+    if (enemy.hp > 0 && player.hp > 0) {
+        ctx.font = "14px monospace";
+        if (battleMenuIndex === 0) ctx.fillText("> ", 240, 365);
+        ctx.fillText("FIGHT", 255, 365);
+
+        if (battleMenuIndex === 1) ctx.fillText("> ", 320, 365);
+        ctx.fillText("RUN", 335, 365);
+    }
+}
+
+// --- MAIN GAME LOOP ---
+function gameLoop() {
+    if (gameState === "EXPLORE") {
+        drawExplore();
+    } else if (gameState === "BATTLE") {
+        drawBattle();
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+// Kickstart the game loop
+requestAnimationFrame(gameLoop);
+</script>
+
+</body>
+</html>
